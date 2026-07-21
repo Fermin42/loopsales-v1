@@ -739,7 +739,7 @@ async function buildSiigoCustomerPayload(c: {
 export const listPendingCustomers = createServerFn({ method: "GET" })
   .middleware([attachAuthHeader, requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAdmin(context.userId);
+    await assertApprover(context.userId);
     const { data, error } = await supabaseAdmin
       .from("customers")
       .select("id, identification, id_type, person_type, display_name, commercial_name, first_name, last_name, email, phone, address, city_name, city_code, country_code, seller_siigo_id, created_by_user, created_at")
