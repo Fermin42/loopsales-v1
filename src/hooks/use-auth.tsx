@@ -13,10 +13,23 @@ interface AuthState {
   role: AppRole | null;
   roles: AppRole[];
   hasRole: (r: AppRole | AppRole[]) => boolean;
+  /** Nombre real del usuario desde profiles.full_name (fallback email) */
+  displayName: string;
+  /** Etiquetas de roles en español, separadas por " · " */
+  roleLabel: string;
   loading: boolean;
   refreshRole: () => Promise<void>;
   signOut: () => Promise<void>;
 }
+
+const ROLE_ES: Record<AppRole, string> = {
+  admin: "Administrador",
+  vendedor: "Vendedor",
+  facturacion: "Facturación",
+  cartera: "Cartera",
+  bodega: "Bodega",
+  conductor: "Conductor",
+};
 
 const Ctx = createContext<AuthState | undefined>(undefined);
 
