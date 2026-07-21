@@ -15,7 +15,7 @@ import { ROLE_LABELS, type AppRole as FlowRole } from "@/lib/order-flow";
 type Role = "bodega" | "conductor" | "facturacion" | "cartera";
 type Pending = {
   id: string; order_id: string; from_role: string | null; notes: string | null; created_at: string;
-  order: { id: string; order_number: string | null; status: string; total: number; customer: { display_name: string; address: string | null; phone: string | null } | null } | null;
+  order: { id: string; order_number: string | null; status: string; total: number; siigo_invoice_number: string | null; customer: { display_name: string; address: string | null; phone: string | null } | null } | null;
 };
 type Active = {
   id: string; order_number: string | null; status: string; total: number; siigo_invoice_number: string | null;
