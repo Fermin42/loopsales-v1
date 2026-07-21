@@ -337,7 +337,17 @@ function OrderDetailPage() {
           </Link>
         )}
         {canInvoice && (
-          <Button size="sm" onClick={() => run(() => doInvoice({ data: { id } }), "Facturado")} disabled={busy || (order.has_manual_price && !order.manual_price_acknowledged)}>
+          <Button size="sm" onClick={async () => {
+            setBusy(true);
+            try {
+              await toast.promise(doInvoice({ data: { id } }), {
+                loading: "Facturando en Siigo…",
+                success: "Factura creada correctamente",
+                error: (e) => (e instanceof Error ? e.message : "Error al facturar"),
+              });
+              load();
+            } catch { /* toast lo mostró */ } finally { setBusy(false); }
+          }} disabled={busy || (order.has_manual_price && !order.manual_price_acknowledged)}>
             <FileText className="w-4 h-4 mr-1" />Facturar
           </Button>
         )}

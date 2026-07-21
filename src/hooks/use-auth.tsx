@@ -13,10 +13,23 @@ interface AuthState {
   role: AppRole | null;
   roles: AppRole[];
   hasRole: (r: AppRole | AppRole[]) => boolean;
+  /** Nombre real del usuario desde profiles.full_name (fallback email) */
+  displayName: string;
+  /** Etiquetas de roles en español, separadas por " · " */
+  roleLabel: string;
   loading: boolean;
   refreshRole: () => Promise<void>;
   signOut: () => Promise<void>;
 }
+
+const ROLE_ES: Record<AppRole, string> = {
+  admin: "Administrador",
+  vendedor: "Vendedor",
+  facturacion: "Facturación",
+  cartera: "Cartera",
+  bodega: "Bodega",
+  conductor: "Conductor",
+};
 
 const Ctx = createContext<AuthState | undefined>(undefined);
 
@@ -31,10 +44,16 @@ function primary(roles: AppRole[]): AppRole | null {
   return roles[0];
 }
 
+async function loadProfileName(userId: string): Promise<string | null> {
+  const { data } = await supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle();
+  return data?.full_name ?? null;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const ensureRole = useServerFn(ensureCurrentUserRole);
   const [session, setSession] = useState<Session | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
+  const [profileName, setProfileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -51,13 +70,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (newSession?.user) {
         setLoading(true);
         setTimeout(() => {
-          resolve(newSession.user.id)
-            .then((rs) => { if (active) setRoles(rs); })
-            .catch(() => { if (active) setRoles([]); })
+          Promise.all([resolve(newSession.user.id), loadProfileName(newSession.user.id)])
+            .then(([rs, name]) => { if (active) { setRoles(rs); setProfileName(name); } })
+            .catch(() => { if (active) { setRoles([]); setProfileName(null); } })
             .finally(() => { if (active) setLoading(false); });
         }, 0);
       } else {
         setRoles([]);
+        setProfileName(null);
         setLoading(false);
       }
     });
@@ -67,8 +87,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!active) return;
         setSession(data.session);
         if (data.session?.user) {
-          const rs = await resolve(data.session.user.id);
-          if (active) setRoles(rs);
+          const [rs, name] = await Promise.all([resolve(data.session.user.id), loadProfileName(data.session.user.id)]);
+          if (active) { setRoles(rs); setProfileName(name); }
         }
       } catch {
         if (active) setRoles([]);
@@ -83,6 +103,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const email = session?.user?.email ?? "";
+  const roleLabel = roles.map((r) => ROLE_ES[r]).filter(Boolean).join(" · ") || "Usuario";
+
   const value: AuthState = {
     session,
     user: session?.user ?? null,
@@ -92,9 +115,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const need = Array.isArray(r) ? r : [r];
       return need.some((x) => roles.includes(x));
     },
+    displayName: profileName || email || "Usuario",
+    roleLabel,
     loading,
     refreshRole: async () => {
-      if (session?.user) setRoles(await loadRoles(session.user.id));
+      if (session?.user) {
+        const [rs, name] = await Promise.all([loadRoles(session.user.id), loadProfileName(session.user.id)]);
+        setRoles(rs); setProfileName(name);
+      }
     },
     signOut: async () => {
       await supabase.auth.signOut();

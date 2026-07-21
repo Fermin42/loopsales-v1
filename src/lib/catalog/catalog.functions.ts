@@ -18,6 +18,17 @@ async function assertAdmin(userId: string) {
   if (!data) throw new Response("Forbidden: solo admin", { status: 403 });
 }
 
+// Aprobación de clientes: admin o cartera.
+async function assertApprover(userId: string) {
+  const { data, error } = await supabaseAdmin
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .in("role", ["admin", "cartera"]);
+  if (error) throw new Error(error.message);
+  if (!data || data.length === 0) throw new Response("Forbidden: solo admin o cartera", { status: 403 });
+}
+
 // ---------- LISTADOS ----------
 const ListSchema = z.object({
   search: z.string().trim().max(120).optional(),
@@ -728,7 +739,7 @@ async function buildSiigoCustomerPayload(c: {
 export const listPendingCustomers = createServerFn({ method: "GET" })
   .middleware([attachAuthHeader, requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAdmin(context.userId);
+    await assertApprover(context.userId);
     const { data, error } = await supabaseAdmin
       .from("customers")
       .select("id, identification, id_type, person_type, display_name, commercial_name, first_name, last_name, email, phone, address, city_name, city_code, country_code, seller_siigo_id, created_by_user, created_at")
@@ -765,7 +776,7 @@ export const approveCustomer = createServerFn({ method: "POST" })
     patch: LocalCustomerSchema.partial().optional(),
   }).parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    await assertApprover(context.userId);
     const { data: current, error: e1 } = await supabaseAdmin
       .from("customers")
       .select("id, siigo_id, identification, id_type, person_type, display_name, commercial_name, first_name, last_name, email, phone, address, city_name, city_code, country_code, seller_siigo_id")

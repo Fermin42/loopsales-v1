@@ -4,25 +4,22 @@ import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
   Users,
-  Package,
-  ShoppingCart,
-  Settings,
   LogOut,
   Building2,
-  Shield,
-  SlidersHorizontal,
-  CreditCard,
-  Inbox,
   ClipboardList,
-  UserPlus,
-  MapPin,
+  Boxes,
+  Radar,
+  Cog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/flow/NotificationBell";
 
+// Sidebar reorganizada a 6 secciones. Mantenemos las rutas existentes
+// y agrupamos por concepto — la unificación real de páginas (p. ej.
+// Operación como una sola vista con tabs) llega en un pase posterior.
 const sections = [
   {
-    label: "Resumen",
+    label: "Inicio",
     items: [
       { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
     ],
@@ -30,24 +27,28 @@ const sections = [
   {
     label: "Operación",
     items: [
-      { to: "/admin/pedidos", label: "Pedidos", icon: ShoppingCart, exact: false },
-      { to: "/admin/cola", label: "Cola operativa", icon: Inbox, exact: false },
-      { to: "/admin/bandeja", label: "Mi bandeja", icon: Inbox, exact: false },
+      { to: "/admin/pedidos", label: "Pedidos", icon: ClipboardList, exact: false },
+      { to: "/admin/cola", label: "Cola operativa", icon: ClipboardList, exact: false },
+      { to: "/admin/bandeja", label: "Mi bandeja", icon: ClipboardList, exact: false },
       { to: "/admin/solicitudes", label: "Solicitudes", icon: ClipboardList, exact: false },
-      { to: "/admin/mapa", label: "Mapa de clientes", icon: MapPin, exact: false },
     ],
   },
   {
-    label: "Maestros",
+    label: "Clientes",
     items: [
       { to: "/admin/clientes", label: "Clientes", icon: Users, exact: false },
-      { to: "/admin/clientes-pendientes", label: "Aprobar clientes", icon: UserPlus, exact: false },
-      { to: "/admin/productos", label: "Productos", icon: Package, exact: false },
-      { to: "/admin/medios-pago", label: "Medios de pago", icon: CreditCard, exact: false },
+      { to: "/admin/clientes-pendientes", label: "Aprobar clientes", icon: Users, exact: false },
+      { to: "/admin/mapa", label: "Mapa y rutas", icon: Radar, exact: false },
     ],
   },
   {
-    label: "Análisis",
+    label: "Monitoreo",
+    items: [
+      { to: "/admin/mapa", label: "Ubicaciones en vivo", icon: Radar, exact: false },
+    ],
+  },
+  {
+    label: "Reportes",
     items: [
       { to: "/admin/reportes", label: "Reportes", icon: ClipboardList, exact: false },
     ],
@@ -55,15 +56,17 @@ const sections = [
   {
     label: "Administración",
     items: [
-      { to: "/admin/usuarios", label: "Usuarios", icon: Shield, exact: false },
-      { to: "/admin/ajustes", label: "Ajustes", icon: SlidersHorizontal, exact: false },
-      { to: "/admin/siigo", label: "Configuración Siigo", icon: Settings, exact: false },
+      { to: "/admin/usuarios", label: "Usuarios", icon: Users, exact: false },
+      { to: "/admin/ajustes", label: "Configuración", icon: Cog, exact: false },
+      { to: "/admin/siigo", label: "Integración Siigo", icon: Cog, exact: false },
+      { to: "/admin/productos", label: "Catálogo / productos", icon: Boxes, exact: false },
+      { to: "/admin/medios-pago", label: "Medios de pago", icon: Boxes, exact: false },
     ],
   },
 ] as const;
 
 export function AdminLayout() {
-  const { user, signOut } = useAuth();
+  const { displayName, roleLabel, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -115,8 +118,9 @@ export function AdminLayout() {
           ))}
         </nav>
         <div className="p-3 border-t border-sidebar-border space-y-2">
-          <div className="px-3 py-2 text-xs text-sidebar-foreground/70 truncate">
-            {user?.email}
+          <div className="px-3 py-2 text-xs text-sidebar-foreground/90 min-w-0">
+            <div className="font-medium truncate">{displayName}</div>
+            <div className="text-[10px] text-sidebar-foreground/60 truncate">{roleLabel}</div>
           </div>
           <Button
             variant="ghost"

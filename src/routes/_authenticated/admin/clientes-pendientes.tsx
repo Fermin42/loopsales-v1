@@ -7,14 +7,33 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, Check, X, Inbox, Pencil } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, Check, Inbox, Pencil } from "lucide-react";
 import { toast } from "sonner";
-import { listPendingCustomers, approveCustomer, rejectCustomer } from "@/lib/catalog/catalog.functions";
+import { listPendingCustomers, approveCustomer } from "@/lib/catalog/catalog.functions";
 import { CityAutocomplete, type SelectedCity } from "@/components/CityAutocomplete";
 
 export const Route = createFileRoute("/_authenticated/admin/clientes-pendientes")({
   component: PendingCustomersPage,
 });
+
+// Etiquetas legibles para los códigos de tipo de identificación Siigo (Colombia).
+const ID_TYPE_LABELS: Record<string, string> = {
+  "11": "Registro civil",
+  "12": "Tarjeta de identidad",
+  "13": "Cédula de ciudadanía",
+  "21": "Tarjeta de extranjería",
+  "22": "Cédula de extranjería",
+  "31": "NIT",
+  "32": "NIT extranjero",
+  "41": "Pasaporte",
+  "42": "Documento de identificación extranjero",
+  "43": "Sin identificación del exterior",
+  "50": "NIT otro país",
+  "91": "NUIP",
+};
+
+const ID_TYPE_OPTIONS = Object.entries(ID_TYPE_LABELS);
 
 type Pending = {
   id: string;
@@ -40,13 +59,10 @@ type Pending = {
 function PendingCustomersPage() {
   const fetchList = useServerFn(listPendingCustomers);
   const approveFn = useServerFn(approveCustomer);
-  const rejectFn = useServerFn(rejectCustomer);
   const [rows, setRows] = useState<Pending[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Pending | null>(null);
   const [editingCity, setEditingCity] = useState<SelectedCity | null>(null);
-  const [rejecting, setRejecting] = useState<Pending | null>(null);
-  const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
 
   const load = () => {
@@ -63,41 +79,31 @@ function PendingCustomersPage() {
     if (!editing) return;
     setBusy(true);
     try {
-      await approveFn({ data: { id: editing.id, patch: {
-        identification: editing.identification,
-        id_type: editing.id_type ?? "13",
-        person_type: (editing.person_type ?? "Person") as "Person" | "Company",
-        display_name: editing.display_name,
-        commercial_name: editing.commercial_name ?? undefined,
-        first_name: editing.first_name ?? undefined,
-        last_name: editing.last_name ?? undefined,
-        email: editing.email ?? undefined,
-        phone: editing.phone ?? undefined,
-        address: editing.address ?? undefined,
-        city_name: editing.city_name ?? undefined,
-        city_code: editing.city_code ?? undefined,
-        country_code: editing.country_code ?? "Co",
-      } } });
-      toast.success("Cliente aprobado y creado en Siigo");
+      await toast.promise(
+        approveFn({ data: { id: editing.id, patch: {
+          identification: editing.identification,
+          id_type: editing.id_type ?? "13",
+          person_type: (editing.person_type ?? "Person") as "Person" | "Company",
+          display_name: editing.display_name,
+          commercial_name: editing.commercial_name ?? undefined,
+          first_name: editing.first_name ?? undefined,
+          last_name: editing.last_name ?? undefined,
+          email: editing.email ?? undefined,
+          phone: editing.phone ?? undefined,
+          address: editing.address ?? undefined,
+          city_name: editing.city_name ?? undefined,
+          city_code: editing.city_code ?? undefined,
+          country_code: editing.country_code ?? "Co",
+        } } }),
+        {
+          loading: "Aprobando y creando en Siigo…",
+          success: "Cliente aprobado y creado en Siigo",
+          error: (e) => (e instanceof Error ? e.message : "Error al aprobar"),
+        },
+      );
       setEditing(null);
       load();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al aprobar");
-    } finally { setBusy(false); }
-  };
-
-  const onReject = async () => {
-    if (!rejecting) return;
-    if (reason.trim().length < 3) return toast.error("Motivo obligatorio");
-    setBusy(true);
-    try {
-      await rejectFn({ data: { id: rejecting.id, reason: reason.trim() } });
-      toast.success("Cliente rechazado");
-      setRejecting(null); setReason("");
-      load();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error");
-    } finally { setBusy(false); }
+    } catch { /* toast ya lo mostró */ } finally { setBusy(false); }
   };
 
   if (loading) return <div className="grid place-items-center py-16"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
@@ -120,10 +126,10 @@ function PendingCustomersPage() {
             <Card key={c.id} className="p-4">
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium">{c.display_name}</span>
                     <Badge variant="secondary">{c.person_type === "Company" ? "Jurídica" : "Natural"}</Badge>
-                    <Badge variant="outline">{c.id_type ?? "—"} · {c.identification}</Badge>
+                    <Badge variant="outline">{(c.id_type && ID_TYPE_LABELS[c.id_type]) || c.id_type || "—"} · {c.identification}</Badge>
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
                     {c.email ?? "sin email"} · {c.phone ?? "sin tel"} · {c.city_name ?? "sin ciudad"}
@@ -135,11 +141,8 @@ function PendingCustomersPage() {
                   </div>
                 </div>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="outline" onClick={() => setEditing(c)}>
+                  <Button size="sm" onClick={() => setEditing(c)}>
                     <Pencil className="w-4 h-4 mr-1" /> Revisar
-                  </Button>
-                  <Button size="sm" variant="destructive" onClick={() => { setRejecting(c); setReason(""); }}>
-                    <X className="w-4 h-4 mr-1" /> Rechazar
                   </Button>
                 </div>
               </div>
@@ -171,8 +174,15 @@ function PendingCustomersPage() {
                   </select>
                 </div>
                 <div>
-                  <Label className="text-xs">Tipo doc.</Label>
-                  <Input value={editing.id_type ?? ""} onChange={(e) => setEditing({ ...editing, id_type: e.target.value })} />
+                  <Label className="text-xs">Tipo documento</Label>
+                  <Select value={editing.id_type ?? "13"} onValueChange={(v) => setEditing({ ...editing, id_type: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {ID_TYPE_OPTIONS.map(([code, label]) => (
+                        <SelectItem key={code} value={code}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div>
@@ -244,26 +254,6 @@ function PendingCustomersPage() {
             <Button onClick={onApprove} disabled={busy}>
               {busy ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
               Aprobar y crear en Siigo
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal rechazar */}
-      <Dialog open={!!rejecting} onOpenChange={(o) => !o && setRejecting(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Rechazar cliente</DialogTitle></DialogHeader>
-          <div className="space-y-2">
-            <div className="text-sm">{rejecting?.display_name} ({rejecting?.identification})</div>
-            <Label className="text-xs">Motivo</Label>
-            <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Datos inválidos, duplicado..." />
-            <div className="text-[11px] text-muted-foreground">El cliente quedará inactivo y no podrá facturarse.</div>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setRejecting(null)} disabled={busy}>Cancelar</Button>
-            <Button variant="destructive" onClick={onReject} disabled={busy}>
-              {busy ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Rechazar
             </Button>
           </DialogFooter>
         </DialogContent>
