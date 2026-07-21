@@ -776,7 +776,7 @@ export const approveCustomer = createServerFn({ method: "POST" })
     patch: LocalCustomerSchema.partial().optional(),
   }).parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    await assertApprover(context.userId);
     const { data: current, error: e1 } = await supabaseAdmin
       .from("customers")
       .select("id, siigo_id, identification, id_type, person_type, display_name, commercial_name, first_name, last_name, email, phone, address, city_name, city_code, country_code, seller_siigo_id")
