@@ -1,0 +1,9 @@
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'awaiting_billing';
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'awaiting_warehouse';
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'awaiting_driver';
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'awaiting_billing_return';
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'returned_to_billing';
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'awaiting_collections';
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'finalized';
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'rejected';
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'pending_acceptance';

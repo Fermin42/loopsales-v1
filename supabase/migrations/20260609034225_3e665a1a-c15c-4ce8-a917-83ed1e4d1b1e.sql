@@ -1,0 +1,9 @@
+ALTER TYPE public.order_status ADD VALUE IF NOT EXISTS 'ready_for_warehouse';
+ALTER TYPE public.order_status ADD VALUE IF NOT EXISTS 'in_warehouse';
+ALTER TYPE public.order_status ADD VALUE IF NOT EXISTS 'ready_for_driver';
+ALTER TYPE public.order_status ADD VALUE IF NOT EXISTS 'in_transit';
+ALTER TYPE public.order_status ADD VALUE IF NOT EXISTS 'delivered';
+ALTER TYPE public.order_status ADD VALUE IF NOT EXISTS 'returning_to_billing';
+ALTER TYPE public.order_status ADD VALUE IF NOT EXISTS 'with_collections';
+ALTER TYPE public.order_status ADD VALUE IF NOT EXISTS 'closed';
+ALTER TYPE public.order_status ADD VALUE IF NOT EXISTS 'voided';
